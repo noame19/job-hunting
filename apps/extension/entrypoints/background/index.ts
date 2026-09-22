@@ -36,11 +36,13 @@ import { SystemService } from './service/systemService';
 import { setUser, UserService } from './service/userService';
 import { onMessageHandle as onSingleFileMessageHandle } from '@/lib/single-file/background.js';
 import App, { WORLD_BACKGROUND } from '@/common/extension/app';
+import { setBrowserPreference } from '@/entrypoints/offscreen/worker/database';
 import { setupFirefoxEnvironment } from './firefox';
 
 export default defineBackground(() => {
   infoLog('background ready');
   App.setWorld(WORLD_BACKGROUND);
+  setBrowserPreference('chrome');
   chrome.runtime.onInstalled.addListener(async () => {
     debugLog('updateDynamicRules ready');
     //https://developer.chrome.com/docs/extensions/reference/api/declarativeNetRequest

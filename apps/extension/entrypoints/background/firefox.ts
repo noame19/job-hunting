@@ -1,12 +1,18 @@
 import { onMessageHandle } from '@/common/extension/background/util';
 import { onMessageHandle as onSingleFileMessageHandle } from '@/lib/single-file/background.js';
 import App, { WORLD_BACKGROUND } from '@/common/extension/app';
+import { setBrowserPreference } from '@/entrypoints/offscreen/worker/database';
 
 export function setupFirefoxEnvironment(
   actionFunction: Map<any, any>,
   startBackgroundTaskLoop: () => Promise<void>,
 ) {
   App.setWorld(WORLD_BACKGROUND);
+
+  // 在 Worker 拉起前先把浏览器偏好写进 database 模块，
+  // 使其内部 getDefaultDataDir() 第一次调用就选择 idb://job-hunting-pgdata，
+  // 避免依赖运行时 navigator.userAgent 嗅探。
+  setBrowserPreference('firefox');
 
   const worker = new Worker(
     chrome.runtime.getURL('/offscreen-worker.js'),

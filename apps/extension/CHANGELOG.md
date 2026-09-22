@@ -3,14 +3,16 @@
 ### 🚀 Features
 
 - 适配 Firefox / Zen Browser：在 Firefox 上跳过 `chrome.offscreen`，由后台脚本直接拉起模块 Worker 并桥接消息；构建产物 `firefox-mv3` 与 `job-hunting-extension-<version>-firefox.zip` 可在 `about:debugging` 临时加载。
+- Firefox 持久化数据库：默认改用 PGlite 内置的 IndexedDB 后端（`idb://job-hunting-pgdata`），绕过 OPFS-AHP 在 Gecko 上的崩溃路径（Bug 1673477）。通过 `setBrowserPreference('firefox' | 'chrome')` 在 Worker 启动前显式声明浏览器类型，避免依赖 navigator.userAgent 嗅探。
 
 ### 🐛 Fixed
 
 - Firefox 构建不再注入 `offscreen`、`declarativeNetRequestWithHostAccess` 等 Chrome 专属权限，并补齐 `browser_specific_settings.gecko.id`，避免 Manifest 校验失败。
+- Firefox 数据库清理（`dbDelete`）改走 `indexedDB.deleteDatabase`，不再调用 `navigator.storage.getDirectory()` / `removeEntry`，避免在 Gecko 上触发不存在的 OPFS API。
 
 ### ⚠️ Known Limitations
 
-- Firefox 上 PGlite + OPFS 的持久化存在性能与稳定性问题（参见上游 issue #2），仍属于已知未解决项，本分支默认不在 Firefox 上启用持久化数据库。
+- Chrome / Edge 继续走原有 OPFS-AHP 路径，行为不变；如需同时清理 OPFS 与 IndexedDB，需要分别执行 Chrome / Firefox 构建对应的卸载流程。
 
 ## 5.0.1 (2026-09-07)
 

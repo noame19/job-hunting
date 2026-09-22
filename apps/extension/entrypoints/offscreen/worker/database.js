@@ -36,6 +36,51 @@ const JOB_DIR = 'job';
 const JOB_DB_PATH = '/' + DATA_DIR + '/' + JOB_DIR + '/';
 const DUMP_FILE_NAME = 'db.sql';
 
+// PGlite 后端说明：
+// - Chrome / Edge：使用 OPFS-AHP（`opfs-ahp://...`），由浏览器原生提供高性能持久化。
+// - Firefox / Zen：OPFS-AHP 在 Gecko 上仍不稳定（Bug 1673477），改用 IndexedDB 后端（`idb://...`），
+//   直接绕过 navigator.storage.getDirectory 的 ERRORDATA_STACK_SIZE 崩溃路径。
+// 通过运行时探测 chrome.runtime.getURL 生成的 background script URL 后缀来判断目标浏览器。
+// 当未探测到明确的 Firefox 标记时，默认保持 Chrome 的 OPFS-AHP 行为，零回归。
+const JOB_DB_IDB_PATH = 'idb://job-hunting-pgdata';
+
+// 运行时偏好：worker 启动时由 setupFirefoxEnvironment 显式声明浏览器类型。
+// 当偏好未设置时，退回到基于 navigator / runtime URL 的探测，保持向后兼容。
+let browserPreference = 'auto';
+export const setBrowserPreference = (value) => {
+  if (value === 'firefox' || value === 'chrome' || value === 'auto') {
+    browserPreference = value;
+  }
+};
+
+const isFirefoxEnvironment = () => {
+  if (browserPreference === 'firefox') return true;
+  if (browserPreference === 'chrome') return false;
+  try {
+    if (typeof importScripts === 'function') {
+      return true;
+    }
+  } catch (_) {
+    // ignore
+  }
+  if (typeof globalThis !== 'undefined' && globalThis.chrome?.runtime?.getURL) {
+    const url = globalThis.chrome.runtime.getURL('').toLowerCase();
+    if (url.startsWith('moz-extension://')) return true;
+    // Firefox MV3 在某些版本上仍返回 chrome-extension://，兜底判定 navigator.userAgent
+  }
+  if (typeof navigator !== 'undefined' && /firefox|zen/i.test(navigator.userAgent || '')) {
+    return true;
+  }
+  return false;
+};
+
+const getDefaultDataDir = () => {
+  if (isFirefoxEnvironment()) {
+    return JOB_DB_IDB_PATH;
+  }
+  return `opfs-ahp://${JOB_DB_PATH}`;
+};
+
 const changelogList = [
   new ChangeLogV1(),
   new ChangeLogV2(),
@@ -56,7 +101,7 @@ const changelogList = [
 ];
 initChangeLog(changelogList);
 
-let dataDir = `opfs-ahp://${JOB_DB_PATH}`;
+let dataDir = getDefaultDataDir();
 
 connectionManager.setInitHandler(async () => {
   return initDb({ dataDir });
@@ -507,7 +552,7 @@ export const Database = {
         file: blob,
       });
       await _dbDelete();
-      const restoredPG = await PGlite.create(`opfs-ahp://${JOB_DB_PATH}`);
+      const restoredPG = await PGlite.create(getDefaultDataDir());
       await restoredPG.exec(sqlText);
       await connectionManager.adoptDb(restoredPG);
       postSuccessMessage(message, {});
@@ -586,6 +631,18 @@ export const Database = {
 const _dbDelete = async () => {
   await connectionManager.close();
   connectionManager.enterRecoveryMode();
+  if (isFirefoxEnvironment()) {
+    // PGlite 0.5.x 在 idbfs 下使用 `idb://<name>` 中的 <name> 作为 IndexedDB 数据库名。
+    // PGlite 不提供静态 deleteDatabase，因此直接通过浏览器原生 indexedDB API 清理。
+    const dbName = JOB_DB_IDB_PATH.replace(/^idb:\/\//, '');
+    await new Promise((resolve, reject) => {
+      const req = indexedDB.deleteDatabase(dbName);
+      req.onsuccess = () => resolve(undefined);
+      req.onerror = () => reject(req.error);
+      req.onblocked = () => resolve(undefined);
+    });
+    return;
+  }
   const root = await navigator.storage.getDirectory();
   const fileHandle = await root.getDirectoryHandle(DATA_DIR);
   await fileHandle.removeEntry(JOB_DIR, { recursive: true });
@@ -595,7 +652,7 @@ const _dbDelete = async () => {
  *
  * @returns
  */
-const initDb = async function ({ dataDir = `opfs-ahp://${JOB_DB_PATH}` } = {}) {
+const initDb = async function ({ dataDir = getDefaultDataDir() } = {}) {
   let db;
   if (isDevEnv() && ENABLE_SQL_AUTO_EXPLAIN) {
     db = new PGlite(dataDir, {

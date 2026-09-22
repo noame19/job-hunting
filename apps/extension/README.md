@@ -34,7 +34,7 @@ pnpm --filter @job-hunting/extension run zip:firefox
 
 已知限制（上游 issue [#2](https://github.com/lastsunday/job-hunting/issues/2)）：
 
-- Firefox 上 PGlite + OPFS 的持久化路径在 Gecko 上存在性能与稳定性问题（建表 10s+、偶发 `ERRORDATA_STACK_SIZE exceeded`），因此 Firefox 构建默认未启用 OPFS-ahp 路径，请勿在 Firefox 上期待数据库长期持久化；如需在 Firefox 上做完整测试，请先用 SQLite-IndexedDB 备份方案或等待上游迁移。
+- Firefox 上 PGlite + OPFS 的持久化路径在 Gecko 上存在性能与稳定性问题（建表 10s+、偶发 `ERRORDATA_STACK_SIZE exceeded`），本分支将 Firefox 默认切换为 PGlite 内置的 IndexedDB 后端（`idb://job-hunting-pgdata`），不再走 OPFS-AHP，从而规避上述崩溃。Chrome / Edge 继续走原来的 `opfs-ahp://` 路径，保持行为零回归。
 
 
 
