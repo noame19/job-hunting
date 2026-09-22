@@ -7,7 +7,7 @@
 
 ### 🐛 Fixed
 
-- Firefox 构建不再注入 `offscreen`、`declarativeNetRequestWithHostAccess` 等 Chrome 专属权限，并补齐 `browser_specific_settings.gecko.id`，避免 Manifest 校验失败。
+- Firefox 构建不再注入 `offscreen`、`declarativeNetRequestWithHostAccess`、`debugger` 等 Chrome 专属权限，并补齐 `browser_specific_settings.gecko.id`，避免 Manifest 校验失败（`debugger` 在 Gecko MV3 权限白名单中不被接受，且项目代码里没有 `chrome.debugger` 调用）。
 - Firefox 数据库清理（`dbDelete`）改走 `indexedDB.deleteDatabase`，不再调用 `navigator.storage.getDirectory()` / `removeEntry`，避免在 Gecko 上触发不存在的 OPFS API。
 
 ### ⚠️ Known Limitations

@@ -43,11 +43,12 @@ export default defineConfig({
     ],
     permissions: browser === 'firefox'
       ? [
+          // 注意：Firefox MV3 权限白名单不接受 `debugger`/`sidePanel`/`offscreen` 等 Chrome 专属权限；
+          // 该项目代码里也没有 chrome.debugger 的调用点，所以 Firefox 端直接不声明。
           'storage',
           'unlimitedStorage',
           'webRequest',
           'declarativeNetRequest',
-          'debugger',
           'cookies',
         ]
       : [
