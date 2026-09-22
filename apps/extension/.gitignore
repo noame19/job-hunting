@@ -36,3 +36,5 @@ dist-ssr
 /.features-gen/
 /allure-results/
 /allure-report/
+# TypeScript incremental build cache
+*.tsbuildinfo

@@ -1,3 +1,17 @@
+## Unreleased
+
+### 🚀 Features
+
+- 适配 Firefox / Zen Browser：在 Firefox 上跳过 `chrome.offscreen`，由后台脚本直接拉起模块 Worker 并桥接消息；构建产物 `firefox-mv3` 与 `job-hunting-extension-<version>-firefox.zip` 可在 `about:debugging` 临时加载。
+
+### 🐛 Fixed
+
+- Firefox 构建不再注入 `offscreen`、`declarativeNetRequestWithHostAccess` 等 Chrome 专属权限，并补齐 `browser_specific_settings.gecko.id`，避免 Manifest 校验失败。
+
+### ⚠️ Known Limitations
+
+- Firefox 上 PGlite + OPFS 的持久化存在性能与稳定性问题（参见上游 issue #2），仍属于已知未解决项，本分支默认不在 Firefox 上启用持久化数据库。
+
 ## 5.0.1 (2026-09-07)
 
 ### 🐛 Fixed
